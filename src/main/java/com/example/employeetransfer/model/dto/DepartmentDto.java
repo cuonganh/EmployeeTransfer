@@ -1,8 +1,10 @@
-package com.example.employeetransfer.model;
+package com.example.employeetransfer.model.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class DepartmentDto {
 
     Long departmentId;

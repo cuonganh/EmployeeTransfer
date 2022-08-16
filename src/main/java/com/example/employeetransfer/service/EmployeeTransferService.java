@@ -1,11 +1,14 @@
 package com.example.employeetransfer.service;
 
-import com.example.employeetransfer.model.DepartmentDto;
-import com.example.employeetransfer.model.EmployeeDto;
-import com.example.employeetransfer.model.TransferResponse;
+import com.example.employeetransfer.model.dto.DepartmentDto;
+import com.example.employeetransfer.model.dto.EmployeeDto;
+import com.example.employeetransfer.model.enumerate.EDepartment;
+import com.example.employeetransfer.model.enumerate.EEmployee;
+import com.example.employeetransfer.model.response.TransferResponse;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -13,26 +16,31 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class EmployeeTransferService {
 
+    @Value("${employeeURLs}")
+    private String employeeURLs;
+
+    @Value("${departmentURLs}")
+    private String departmentsURLs;
+
     public TransferResponse<EmployeeDto> getEmployee(Long employeeId) throws ParseException {
 
-        String employeeURL = "http://localhost:8088/employees/" + employeeId;
+        String employeeURL = employeeURLs + employeeId;
         List<Map<String, String>> result = getResultRequest(employeeURL);
 
         EmployeeDto employeeDto = new EmployeeDto();
         if(result.size() > 0){
-            employeeDto.setEmployeeId(Long.valueOf(result.get(0).get("employeeId")));
-            employeeDto.setDepartment(result.get(0).get("department"));
-            employeeDto.setFirstName(result.get(0).get("firstName"));
-            employeeDto.setLastName(result.get(0).get("lastName"));
-            employeeDto.setDateOfBirth(result.get(0).get("dateOfBirth"));
-            employeeDto.setAddress(result.get(0).get("address"));
-            employeeDto.setEmail(result.get(0).get("email"));
-            employeeDto.setPhoneNumber(result.get(0).get("phoneNumber"));
+            employeeDto.setEmployeeId(Long.valueOf(result.get(0).get(EEmployee.EMPLOYEE_ID.getValue())));
+            employeeDto.setDepartment(result.get(0).get(EEmployee.DEPARTMENT.getValue()));
+            employeeDto.setFirstName(result.get(0).get(EEmployee.FIRST_NAME.getValue()));
+            employeeDto.setLastName(result.get(0).get(EEmployee.LAST_NAME.getValue()));
+            employeeDto.setDateOfBirth(result.get(0).get(EEmployee.DATE_OF_BIRTH.getValue()));
+            employeeDto.setAddress(result.get(0).get(EEmployee.ADDRESS.getValue()));
+            employeeDto.setEmail(result.get(0).get(EEmployee.EMAIL.getValue()));
+            employeeDto.setPhoneNumber(result.get(0).get(EEmployee.PHONE_NUMBER.getValue()));
         }
         return new TransferResponse<>(200, "Found employee", employeeDto);
     }
@@ -46,7 +54,7 @@ public class EmployeeTransferService {
             String sortBy
     ) throws ParseException {
 
-        StringBuilder departmentUrl = new StringBuilder("http://localhost:8088/departments?1=1");
+        StringBuilder departmentUrl = new StringBuilder(departmentsURLs);
 
         if (member != null) {
             departmentUrl.append("&member=").append(member);
@@ -61,17 +69,17 @@ public class EmployeeTransferService {
 
         List<DepartmentDto> departmentDtoList = new ArrayList<>();
         if(result.size() > 0) {
-            for(int i = 0; i < result.size(); i++){
+            for (Map<String, String> stringStringMap : result) {
                 DepartmentDto departmentDto = new DepartmentDto();
-                departmentDto.setDepartmentId(Long.valueOf(result.get(i).get("departmentId")));
-                departmentDto.setName(result.get(i).get("name"));
-                departmentDto.setMember(Long.valueOf(result.get(i).get("member")));
-                departmentDto.setDescription(result.get(i).get("description"));
-                departmentDto.setLeader(result.get(i).get("leader"));
+                departmentDto.setDepartmentId(Long.valueOf(stringStringMap.get(EDepartment.DEPARTMENT_ID.getValue())));
+                departmentDto.setName(stringStringMap.get(EDepartment.DEPARTMENT_NAME.getValue()));
+                departmentDto.setMember(Long.valueOf(stringStringMap.get(EDepartment.DEPARTMENT_MEMBERS.getValue())));
+                departmentDto.setDescription(stringStringMap.get(EDepartment.DEPARTMENT_DESCRIPTION.getValue()));
+                departmentDto.setLeader(stringStringMap.get(EDepartment.DEPARTMENT_LEADER.getValue()));
                 departmentDtoList.add(departmentDto);
             }
         }
-        return new TransferResponse<>(200, "Found department", departmentDtoList);
+        return new TransferResponse<>(200, "Found departments", departmentDtoList);
     }
 
 
@@ -79,15 +87,14 @@ public class EmployeeTransferService {
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<String> employeeResponse = restTemplate.getForEntity(url, String.class);
         JSONObject jsonpObject = new JSONObject();
-        if(employeeResponse != null &&employeeResponse.hasBody()) {
+        if(employeeResponse.hasBody()) {
             Object employeesBody = employeeResponse.getBody();
             if(employeesBody != null){
                 JSONParser parser = new JSONParser();
                 jsonpObject = (JSONObject) parser.parse(employeesBody.toString());
             }
         }
-        List<Map<String, String>> result = (List<Map<String, String>>) jsonpObject.get("result");
-        return result;
+        return (List<Map<String, String>>) jsonpObject.get("result");
     }
 
     private StringBuilder urlCondition(String sort, String sortBy, Integer limit, Integer offset){
