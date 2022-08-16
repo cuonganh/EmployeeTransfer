@@ -1,4 +1,4 @@
-package com.example.employeetransfer.model;
+package com.example.employeetransfer.model.response;
 
 import lombok.Getter;
 import lombok.Setter;
